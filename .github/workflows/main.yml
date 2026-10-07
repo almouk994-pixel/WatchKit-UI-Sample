@@ -7,10 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: macos-13
-    env:
-      # إجبار السيرفر على استخدام نسخة Xcode تدعم Apple Watch Series 3
-      DEVELOPER_DIR: /Applications/Xcode_14.3.1.app/Contents/Developer
+    runs-on: macos-14 # استخدام سيرفرات M1 الحديثة والفائقة السرعة
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -39,7 +36,7 @@ jobs:
             TVRemoteWatch:
               type: application
               platform: watchOS
-              deploymentTarget: "8.0" # متوافق مع Series 3
+              deploymentTarget: "8.0" 
               sources: [WatchApp]
               settings:
                 CODE_SIGNING_ALLOWED: "NO"
