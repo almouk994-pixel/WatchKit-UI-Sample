@@ -1,0 +1,83 @@
+workflows:
+  build-trollstore-app:
+    name: Build TVRemote App
+    instance_type: mac_mini_m1
+    environment:
+      xcode: 14.3 # النسخة المدعومة لساعتك Series 3
+    scripts:
+      - name: Install XcodeGen
+        script: brew install xcodegen
+
+      - name: Create project.yml
+        script: |
+          cat << 'EOF' > project.yml
+          name: TVRemote
+          options:
+            bundleIdPrefix: com.tvremote
+            xcodeVersion: "14.3"
+          targets:
+            TVRemoteApp:
+              type: application
+              platform: iOS
+              deploymentTarget: "15.0"
+              sources: [iOSApp]
+              dependencies:
+                - target: TVRemoteWatch
+                  embed: true
+              settings:
+                CODE_SIGNING_ALLOWED: "NO"
+                GENERATE_INFOPLIST_FILE: "YES"
+            TVRemoteWatch:
+              type: application
+              platform: watchOS
+              deploymentTarget: "8.0" 
+              sources: [WatchApp]
+              settings:
+                CODE_SIGNING_ALLOWED: "NO"
+                GENERATE_INFOPLIST_FILE: "YES"
+          EOF
+
+      - name: Setup Source Files
+        script: |
+          mkdir -p iOSApp WatchApp
+          
+          cat << 'EOF' > iOSApp/App.swift
+          import SwiftUI
+          @main struct TVRemoteApp: App {
+              var body: some Scene { WindowGroup { Text("تطبيق الساعة جاهز. سيظهر الآن في تطبيق Watch لتثبيته.") } }
+          }
+          EOF
+          
+          cat << 'EOF' > WatchApp/App.swift
+          import SwiftUI
+          @main struct TVRemoteWatchApp: App {
+              var body: some Scene { WindowGroup { ContentView() } }
+          }
+          EOF
+          
+          USER_FILE=$(find . -name "ContentView.swift" -not -path "./WatchApp/*" | head -n 1)
+          cp "$USER_FILE" WatchApp/ContentView.swift
+
+      - name: Generate Xcode Project
+        script: xcodegen generate
+
+      - name: Build Project
+        script: |
+          xcodebuild clean build \
+            -project TVRemote.xcodeproj \
+            -scheme TVRemoteApp \
+            -configuration Release \
+            -sdk iphoneos \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            SYMROOT=$(PWD)/build_output
+            
+      - name: Package IPA
+        script: |
+          mkdir -p Payload
+          cp -R build_output/Release-iphoneos/TVRemoteApp.app Payload/
+          zip -r TVRemote_TrollStore.ipa Payload
+
+    artifacts:
+      - TVRemote_TrollStore.ipa
