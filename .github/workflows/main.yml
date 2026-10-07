@@ -7,7 +7,10 @@ on:
 
 jobs:
   build:
-    runs-on: macos-14 
+    runs-on: macos-13
+    env:
+      # إجبار السيرفر على استخدام آخر نسخة تدعم Apple Watch Series 3
+      DEVELOPER_DIR: /Applications/Xcode_14.3.1.app/Contents/Developer
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -21,7 +24,7 @@ jobs:
           name: TVRemote
           options:
             bundleIdPrefix: com.tvremote
-            xcodeVersion: "15.0" # هذا السطر السحري لحل مشكلة التوافق
+            xcodeVersion: "14.3" # إجبار الأداة على التوافق مع Xcode 14
           targets:
             TVRemoteApp:
               type: application
