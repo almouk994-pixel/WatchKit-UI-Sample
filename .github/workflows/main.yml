@@ -10,7 +10,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Find and Build Project
         run: |
@@ -35,7 +35,7 @@ jobs:
           zip -r TVRemote_TrollStore.ipa Payload
           
       - name: Upload IPA File
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: TVRemote-App
           path: TVRemote_TrollStore.ipa
