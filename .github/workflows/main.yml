@@ -16,13 +16,14 @@ jobs:
         run: |
           PROJECT_FILE=$(ls | grep .xcodeproj | head -n 1)
           SCHEME_NAME=$(xcodebuild -list -project "$PROJECT_FILE" | grep -A 1 'Schemes:' | tail -n 1 | xargs)
-          echo "Building Scheme: $SCHEME_NAME"
+          echo "Building Scheme: $SCHEME_NAME for watchOS"
           
+          # توجيه البناء لنظام الساعة (watchOS)
           xcodebuild clean build \
             -project "$PROJECT_FILE" \
             -scheme "$SCHEME_NAME" \
             -configuration Release \
-            -sdk iphoneos \
+            -sdk watchos \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
@@ -31,7 +32,8 @@ jobs:
       - name: Package into .ipa
         run: |
           mkdir -p Payload
-          find ~/Library/Developer/Xcode/DerivedData -name "*.app" -path "*/Release-iphoneos/*" -exec cp -R {} Payload/ \;
+          # سحب التطبيق الخاص بالساعة وتحزيمه
+          find ~/Library/Developer/Xcode/DerivedData -name "*.app" -path "*/Release-watchos/*" -exec cp -R {} Payload/ \;
           zip -r TVRemote_TrollStore.ipa Payload
           
       - name: Upload IPA File
