@@ -1,4 +1,4 @@
-name: Build IPA for TrollStore
+name: Build iOS and Watch App for TrollStore
 
 on:
   push:
@@ -7,36 +7,87 @@ on:
 
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: macos-13 # إجبار السيرفر على استخدام نظام يدعم Series 3
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Find and Build Project
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Create project.yml
         run: |
-          PROJECT_FILE=$(ls | grep .xcodeproj | head -n 1)
-          SCHEME_NAME=$(xcodebuild -list -project "$PROJECT_FILE" | grep -A 1 'Schemes:' | tail -n 1 | xargs)
-          echo "Building Scheme: $SCHEME_NAME for watchOS"
+          cat << 'EOF' > project.yml
+          name: TVRemote
+          options:
+            bundleIdPrefix: com.tvremote
+          targets:
+            TVRemoteApp:
+              type: application
+              platform: iOS
+              deploymentTarget: "15.0"
+              sources: [iOSApp]
+              dependencies:
+                - target: TVRemoteWatch
+                  embed: true
+              settings:
+                CODE_SIGNING_ALLOWED: "NO"
+                GENERATE_INFOPLIST_FILE: "YES"
+            TVRemoteWatch:
+              type: application
+              platform: watchOS
+              deploymentTarget: "8.0"
+              sources: [WatchApp]
+              settings:
+                CODE_SIGNING_ALLOWED: "NO"
+                GENERATE_INFOPLIST_FILE: "YES"
+          EOF
+
+      - name: Setup Source Files
+        run: |
+          mkdir -p iOSApp WatchApp
           
-          # توجيه البناء لنظام الساعة (watchOS)
+          # إنشاء تطبيق آيفون وهمي لحمل تطبيق الساعة
+          cat << 'EOF' > iOSApp/App.swift
+          import SwiftUI
+          @main struct TVRemoteApp: App {
+              var body: some Scene { WindowGroup { Text("تطبيق الساعة جاهز. سيظهر الآن في تطبيق Watch لتثبيته.") } }
+          }
+          EOF
+          
+          # إنشاء مدخل تطبيق الساعة
+          cat << 'EOF' > WatchApp/App.swift
+          import SwiftUI
+          @main struct TVRemoteWatchApp: App {
+              var body: some Scene { WindowGroup { ContentView() } }
+          }
+          EOF
+          
+          # سحب كود لوحة اللمس الذي قمت أنت بحفظه ودمجه في الساعة
+          USER_FILE=$(find . -name "ContentView.swift" -not -path "./WatchApp/*" | head -n 1)
+          cp "$USER_FILE" WatchApp/ContentView.swift
+
+      - name: Generate Xcode Project
+        run: xcodegen generate
+
+      - name: Build Project
+        run: |
           xcodebuild clean build \
-            -project "$PROJECT_FILE" \
-            -scheme "$SCHEME_NAME" \
+            -project TVRemote.xcodeproj \
+            -scheme TVRemoteApp \
             -configuration Release \
-            -sdk watchos \
+            -sdk iphoneos \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            ENTITLEMENTS_REQUIRED=NO
+            CODE_SIGNING_ALLOWED=NO
             
-      - name: Package into .ipa
+      - name: Package IPA
         run: |
           mkdir -p Payload
-          # سحب التطبيق الخاص بالساعة وتحزيمه
-          find ~/Library/Developer/Xcode/DerivedData -name "*.app" -path "*/Release-watchos/*" -exec cp -R {} Payload/ \;
+          cp -R ~/Library/Developer/Xcode/DerivedData/*/Build/Products/Release-iphoneos/TVRemoteApp.app Payload/
           zip -r TVRemote_TrollStore.ipa Payload
           
-      - name: Upload IPA File
+      - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
           name: TVRemote-App
