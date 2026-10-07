@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: macos-14 # استخدام سيرفرات M1 الحديثة والفائقة السرعة
+    runs-on: macos-14 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -21,6 +21,7 @@ jobs:
           name: TVRemote
           options:
             bundleIdPrefix: com.tvremote
+            xcodeVersion: "15.0" # هذا السطر السحري لحل مشكلة التوافق
           targets:
             TVRemoteApp:
               type: application
